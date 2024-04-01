@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\AcademicSession;
+namespace App\Http\Livewire\AcademicSession;
 
 use App\Models\AcademicSession;
 use App\Traits\ValidationTrait;
@@ -78,7 +78,7 @@ class Index extends Component
             ->on($newAcademicSession)
             ->log('Created Academic Session');
 
-        $this->dispatch('success', 'Academic Session Created!');
+        $this->emit('success', 'Academic Session Created!');
         $this->reset();
         $this->academicSessions = AcademicSession::all();
     }
@@ -92,7 +92,7 @@ class Index extends Component
         } catch (\Illuminate\Database\QueryException $e) {
             if ($e->getCode() == 23000) {
                 //SQLSTATE[23000]: Integrity constraint violation
-                return $this->dispatch('error', 'Academic session can not be deleted because some resources are dependent on it!');
+                return $this->emit('error', 'Academic session can not be deleted because some resources are dependent on it!');
             }
         }
 
@@ -102,7 +102,7 @@ class Index extends Component
             ->withProperties(['academic_session_name' => $academicSession->name])
             ->log('Deleted Academic Session');
 
-        $this->dispatch('success', 'Academic session deleted!');
+        $this->emit('success', 'Academic session deleted!');
         $this->academicSessions = AcademicSession::all();
     }
 }

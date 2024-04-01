@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\Notification;
+namespace App\Http\Livewire\Notification;
 
 use App\Models\Teacher;
 use App\Models\User;
@@ -72,14 +72,16 @@ class CreateNotification extends Component
 
                     default:
                         return back()->with('error', 'Recipient not found');
+                        break;
                 }
                 break;
 
             default:
+                // code...
                 break;
         }
 
-        $this->dispatch('success', 'Notification sent');
+        $this->emit('success', 'Notification sent');
         $this->reset();
     }
 }

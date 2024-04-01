@@ -159,11 +159,17 @@
         }
 
         Livewire.on('success', message => {
-            alert(message)
+            Toast.fire({
+                icon: 'success',
+                title: message
+            })
         })
 
         Livewire.on('error', message => {
-            alert(message)
+            Toast.fire({
+                icon: 'error',
+                title: message
+            })
         })
     </script>
 </body>
