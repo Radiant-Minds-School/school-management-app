@@ -50,15 +50,20 @@ class ResultGenerationService
 
         $totalObtained = $results->sum('total');
         $totalObtainable = $subjects->count() * 100;
+
+        $scores = $this->getScores($results);
+        $minScores = ($scores->map(fn($score) => $score['min']));
+        $maxScores = ($scores->map(fn($score) => $score['max']));
+        $avgScores = ($scores->map(fn($score) => $score['avg']));
         return [
             'student' => $this->student,
             'totalObtained' => $totalObtained,
             'totalObtainable' => $totalObtainable,
             'percentage' => $totalObtained / $totalObtainable * 100,
             'results' => $results,
-            'maxScores' => $this->getMaxScores($results),
-            'averageScores' => $this->getAvgScores($results),
-            'minScores' => $this->getMinScores($results),
+            'maxScores' => $maxScores,
+            'averageScores' => $avgScores,
+            'minScores' => $minScores,
             'age' => $this->student->age(),
             'pds' => $this->getPds(),
             'pdTypes' => PDType::all(),
@@ -73,62 +78,28 @@ class ResultGenerationService
         ];
     }
 
-    private function getMinScores(Collection $results): Collection
+    private function getScores(Collection $results): Collection
     {
-        return $results->mapWithKeys(function (Result|null $result) {
+        // Get all the min, max, and average scores for the period and classroom at once
+        $scores = Result::where('period_id', $this->period->id)
+            ->whereIn('subject_id', $results->pluck('subject_id')->unique())
+            ->where('classroom_id', $results->first()->classroom_id)
+            ->groupBy('subject_id')
+            ->selectRaw('subject_id, MIN(total) as min_total, MAX(total) as max_total, AVG(total) as avg_total')
+            ->get()
+            ->keyBy('subject_id');
+
+        return $results->mapWithKeys(function (Result|null $result) use ($scores) {
             $key = $result?->subject->name;
+            $score = $scores[$result?->subject_id] ?? null;
 
-            if (!$result) {
-                return [$key => null];
-            }
-
-            $scoresQuery = Result::where('period_id', $this->period->id)
-                ->where('subject_id', $result->subject_id)
-                ->where('classroom_id', $result->classroom_id);
-
-            $maxScore = $scoresQuery->min('total');
-
-            return [$key => $maxScore];
-        });
-    }
-
-    private function getMaxScores(Collection $results): Collection
-    {
-        // dd($results);
-        return $results->mapWithKeys(function (Result|null $result) {
-            $key = $result?->subject->name;
-
-            if (!$result) {
-                return [$key => null];
-            }
-
-            $scoresQuery = Result::where('period_id', $this->period->id)
-                ->where('subject_id', $result->subject_id)
-                ->where('classroom_id', $result->classroom_id);
-
-            $minScore = $scoresQuery->max('total');
-
-            return [$key => $minScore];
-        });
-    }
-
-    private function getAvgScores(Collection $results): Collection
-    {
-        return $results->mapWithKeys(function (Result|null $result) {
-            $key = $result?->subject->name;
-
-            if (!$result) {
-                return [$key => null];
-            }
-
-            $scoresQuery = Result::where('period_id', $this->period->id)
-                ->where('subject_id', $result->subject_id)
-                ->where('classroom_id', $result->classroom_id);
-
-            $averageScore = $scoresQuery->pluck('total');
-            $averageScore = collect($averageScore)->avg();
-
-            return [$key => $averageScore];
+            return [
+                $key => [
+                    'min' => $score?->min_total,
+                    'max' => $score?->max_total,
+                    'avg' => $score?->avg_total,
+                ]
+            ];
         });
     }
 
@@ -137,30 +108,15 @@ class ResultGenerationService
      */
     private function getPds(): array
     {
-        // get pds for the period
-        $pds = $this->student->pds()->where('period_id', $this->period->id)->get();
+        // get pds for period with PDType
+        $pds = $this->student->pds()->with('pdType')->where('period_id', $this->period->id)->get();
 
-        $pdTypeIds = [];
-        $values = [];
+        // use mapWithKeys to create an associative array with pd type names as keys and values as values
+        $pds = $pds->mapWithKeys(function ($pd) {
+            return [$pd->pdType->name => $pd->value];
+        });
 
-        //for each of the pds push the pdTypeId and pd value into two separate arrays
-        foreach ($pds as $pd) {
-            $pdTypeId = $pd->p_d_type_id;
-            array_push($pdTypeIds, $pdTypeId);
-            array_push($values, $pd->value);
-        }
-
-        //for each pdTypeId get the name and push it into an array
-        $pdTypeNames = [];
-        foreach ($pdTypeIds as $pdTypeId) {
-            $pdTypeName = PDType::find($pdTypeId)->name;
-            array_push($pdTypeNames, $pdTypeName);
-        }
-
-        //combine the values array and the names array to form a new associative pds array
-        $pds = array_combine($pdTypeNames, $values);
-
-        return $pds;
+        return $pds->toArray();
     }
 
     /**
@@ -171,30 +127,15 @@ class ResultGenerationService
      */
     private function getAds(): array
     {
-        // get ads for period
-        $ads = $this->student->ads()->where('period_id', $this->period->id)->get();
+        // get ads for period with ADType
+        $ads = $this->student->ads()->with('adType')->where('period_id', $this->period->id)->get();
 
-        $adTypeIds = [];
-        $values = [];
+        // use mapWithKeys to create an associative array with ad type names as keys and values as values
+        $ads = $ads->mapWithKeys(function ($ad) {
+            return [$ad->adType->name => $ad->value];
+        });
 
-        //for each of the ads push the adTypeId and pd value into two separate arrays
-        foreach ($ads as $ad) {
-            $adTypeId = $ad->a_d_type_id;
-            array_push($adTypeIds, $adTypeId);
-            array_push($values, $ad->value);
-        }
-
-        //for each adTypeId get the name and push it into an array
-        $adTypeNames = [];
-        foreach ($adTypeIds as $adTypeId) {
-            $adTypeName = ADType::find($adTypeId)->name;
-            array_push($adTypeNames, $adTypeName);
-        }
-
-        //comnine the values array and the names array to form a new associative ads array
-        $ads = array_combine($adTypeNames, $values);
-
-        return $ads;
+        return $ads->toArray();
     }
 
     /**
@@ -231,14 +172,12 @@ class ResultGenerationService
      */
     private function getPeriodSubjects(Classroom $classroom): Collection
     {
-        $classroom_subjects = DB::table('classroom_subject')
-            ->where('academic_session_id', $this->period->academicSession->id)
-            ->where('classroom_id', $classroom->id)
-            ->get();
-
-        return $classroom_subjects->map(function ($subject) {
-            return Subject::find($subject->subject_id);
-        });
+        return Subject::whereIn('id', function ($query) use ($classroom) {
+            $query->select('subject_id')
+                ->from('classroom_subject')
+                ->where('academic_session_id', $this->period->academicSession->id)
+                ->where('classroom_id', $classroom->id);
+        })->get();
     }
 
     /**
@@ -251,11 +190,16 @@ class ResultGenerationService
 
     private function getSubjectResults(Collection $subjects): Collection
     {
-        return $subjects->mapWithKeys(function (Subject $subject) {
-            return [
-                $subject->name => Result::with('subject')->where('student_id', $this->student->id)
-                    ->where('period_id', $this->period->id)->where('subject_id', $subject->id)->first()
-            ];
+        // Get all results for the student, period, and subjects at once
+        $results = Result::with('subject')
+            ->where('student_id', $this->student->id)
+            ->where('period_id', $this->period->id)
+            ->whereIn('subject_id', $subjects->pluck('id'))
+            ->get()
+            ->keyBy('subject_id');
+
+        return $subjects->mapWithKeys(function (Subject $subject) use ($results) {
+            return [$subject->name => $results[$subject->id] ?? null];
         });
     }
 }
