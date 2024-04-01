@@ -46,6 +46,6 @@ class AD extends Model
      */
     public function adType()
     {
-        return $this->belongsTo(ADType::class);
+        return $this->belongsTo(ADType::class, 'a_d_type_id');
     }
 }

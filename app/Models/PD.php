@@ -53,6 +53,6 @@ class PD extends Model
      */
     public function pdType()
     {
-        return $this->belongsTo(PDType::class);
+        return $this->belongsTo(PDType::class, 'p_d_type_id');
     }
 }
