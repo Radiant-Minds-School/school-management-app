@@ -32,7 +32,7 @@ class ResultGenerationService
     public function generateReport(): array
     {
         $classroom = $this->getClassroom();
-        
+
         $subjects = $this->getPeriodSubjects($classroom);
         $attendance = $this->student->attendances()->where('period_id', $this->period->id)->first();
 
@@ -75,8 +75,8 @@ class ResultGenerationService
 
     private function getMinScores(Collection $results): Collection
     {
-        return $results->mapWithKeys(function (Result $result) {
-            $key = $result->subject->name;
+        return $results->mapWithKeys(function (Result|null $result) {
+            $key = $result?->subject->name;
 
             if (!$result) {
                 return [$key => null];
@@ -94,8 +94,9 @@ class ResultGenerationService
 
     private function getMaxScores(Collection $results): Collection
     {
-        return $results->mapWithKeys(function (Result $result) {
-            $key = $result->subject->name;
+        // dd($results);
+        return $results->mapWithKeys(function (Result|null $result) {
+            $key = $result?->subject->name;
 
             if (!$result) {
                 return [$key => null];
@@ -113,8 +114,8 @@ class ResultGenerationService
 
     private function getAvgScores(Collection $results): Collection
     {
-        return $results->mapWithKeys(function (Result $result) {
-            $key = $result->subject->name;
+        return $results->mapWithKeys(function (Result|null $result) {
+            $key = $result?->subject->name;
 
             if (!$result) {
                 return [$key => null];

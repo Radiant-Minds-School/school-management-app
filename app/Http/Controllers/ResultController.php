@@ -40,7 +40,7 @@ class ResultController extends Controller
 
         //filter subjects that have a result out
         $subjects = $classroomSubjects->map(function ($subject) use ($recordedSubjects) {
-            if (! $recordedSubjects->contains($subject->id)) {
+            if (!$recordedSubjects->contains($subject->id)) {
                 return $subject;
             }
         });
@@ -104,21 +104,22 @@ class ResultController extends Controller
     /**
      * Get student performance report
      */
-    public function showPerformanceReport(Student $student, string $periodSlug): RedirectResponse|View
+    public function showPerformanceReport(Student $student, string $periodSlug)
     {
         $period = Period::where('slug', $periodSlug)->firstOrFail();
         $resultService = new ResultGenerationService($student, $period);
         try {
             $data = $resultService->generateReport();
+            return view('performance-report', $data);
         } catch (Exception $e) {
             if ($e->getMessage() == "Student's class does not have subjects") {
                 return redirect()->route('classroom.show', ['classroom' => $student->classroom])->with('error', 'The student\'s class does not have subjects set for the selected academic session');
             } elseif ($e->getMessage() == 'No results found') {
                 abort(404);
             }
+            throw $e;
         }
 
-        return view('performance-report', $data);
     }
 
     /**
