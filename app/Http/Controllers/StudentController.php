@@ -191,7 +191,7 @@ class StudentController extends Controller
     /**
      * Upload student's image
      */
-    public function uploadImage(Student $student, Request $request):RedirectResponse
+    public function uploadImage(Student $student, Request $request): RedirectResponse
     {
         StudentService::uploadImage($student, $request);
 
