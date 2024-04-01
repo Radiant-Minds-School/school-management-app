@@ -23,7 +23,7 @@
             <div class="container-fluid">
                 <div class="row">
                     <div class="col-12">
-                        <form action="#" method="POST" wire:submit.prevent="submit">
+                        <form action="#" method="POST" wire:submit="submit">
                             @csrf
                             <div class="card">
                                 <div class="card-header">
@@ -35,7 +35,7 @@
                                     <div class="form-group">
                                         <label for="Title">Title</label>
                                         <input type="text" class="form-control @error('title') is-invalid @enderror"
-                                            placeholder="Enter title" wire:model="title">
+                                            placeholder="Enter title" wire:model.live="title">
                                         @error('title')
                                             <small class="text-danger">{{ $message }}</small>
                                         @enderror
@@ -54,7 +54,7 @@
                                     <div class="form-group">
                                         <label for="Notification type">Notification Type</label>
                                         <select class="form-control @error('notificationType') is-invalid @enderror"
-                                            name="notificationType" wire:model="notificationType">
+                                            name="notificationType" wire:model.live="notificationType">
                                             <option></option>
                                             <option>App Notification</option>
                                         </select>
@@ -65,7 +65,7 @@
                                     <div class="form-group">
                                         <label for="To">To:</label>
                                         <select class="form-control @error('to') is-invalid @enderror" name="to"
-                                            wire:model="to">
+                                            wire:model.live="to">
                                             <option></option>
                                             <option>Admins</option>
                                             <option>Master Users</option>

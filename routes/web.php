@@ -21,8 +21,8 @@ use App\Http\Controllers\TeacherController;
 use App\Http\Controllers\TeacherRemarkController;
 use App\Http\Controllers\TermController;
 use App\Http\Controllers\UserController;
-use App\Http\Livewire\AcademicSession\Index as AcademicSessionIndex;
-use App\Http\Livewire\Notification\CreateNotification;
+use App\Livewire\AcademicSession\Index as AcademicSessionIndex;
+use App\Livewire\Notification\CreateNotification;
 use Illuminate\Support\Facades\Route;
 
 /*

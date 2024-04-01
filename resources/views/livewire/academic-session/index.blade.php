@@ -40,12 +40,12 @@
                             <div class="card-header">
                                 <h3 class="card-title">New Academic Session</h3>
                             </div>
-                            <form id="addAcademicSession" method="POST" action="#" wire:submit.prevent="submit">
+                            <form id="addAcademicSession" method="POST" action="#" wire:submit="submit">
                                 @csrf
                                 <div class="card-body">
                                     <div class="form-group">
                                         <label for="Academic Session">Academic Session</label>
-                                        <input type="text" wire:model="name"
+                                        <input type="text" wire:model.live="name"
                                             class="form-control @error('name') is-invalid @enderror"
                                             id="academicSession" placeholder="Enter Academic Session">
                                         <small class="text-muted">e.g 2009-2010 </small>
@@ -55,7 +55,7 @@
                                     </div>
                                     <div class="form-group">
                                         <label>Start Date</label>
-                                        <input type="text" wire:model="startDate"
+                                        <input type="text" wire:model.live="startDate"
                                             class="form-control @error('startDate') is-invalid @enderror" id="startDate"
                                             placeholder="">
                                         <small class="text-muted">format: YYYY-MM-DD </small>
@@ -66,7 +66,7 @@
                                     </div>
                                     <div class="form-group">
                                         <label>End Date</label>
-                                        <input type="text" wire:model="endDate"
+                                        <input type="text" wire:model.live="endDate"
                                             class="form-control @error('endDate') is-invalid @enderror" id="endDate"
                                             placeholder="">
                                         <small class="text-muted">format: YYYY-MM-DD </small>
@@ -217,7 +217,7 @@
             $('#confirmDelete').click(() => {
                 // Set deleteItem property on the component
                 @this.set('deleteItem', document.getElementById('deleteItem').dataset.deleteItem)
-                Livewire.emit('delete')
+                Livewire.dispatch('delete')
             })
 
             Livewire.on('success', _ => {
