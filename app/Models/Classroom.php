@@ -9,7 +9,7 @@ class Classroom extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'rank', 'slug'];
+    protected $fillable = ["name", "rank", "slug", "type"];
 
     /**
      * Subjects relationship
@@ -18,7 +18,9 @@ class Classroom extends Model
      */
     public function subjects()
     {
-        return $this->belongsToMany(Subject::class)->withPivot('academic_session_id')->withTimestamps();
+        return $this->belongsToMany(Subject::class)
+            ->withPivot("academic_session_id")
+            ->withTimestamps();
     }
 
     /**
@@ -48,7 +50,9 @@ class Classroom extends Model
      */
     public function branches()
     {
-        return $this->belongsToMany(Branch::class)->using(BranchClassroom::class)->withTimestamps();
+        return $this->belongsToMany(Branch::class)
+            ->using(BranchClassroom::class)
+            ->withTimestamps();
     }
 
     /**
@@ -58,7 +62,10 @@ class Classroom extends Model
      */
     public function getActiveStudents()
     {
-        return $this->students->whereNull('graduated_at')->where('is_active', true)->all();
+        return $this->students
+            ->whereNull("graduated_at")
+            ->where("is_active", true)
+            ->all();
     }
 
     /**

@@ -43,6 +43,17 @@
                                         @enderror
                                     </div>
                                     <div class="form-group">
+                                        <label for="Type">Type</label>
+                                        <!-- Select -->
+                                        <select class="form-control" name="type">
+                                            <option value="primary" {{ $classroom->type == 'primary' ? 'selected' : '' }}>Primary</option>
+                                            <option value="secondary" {{ $classroom->type == 'secondary' ? 'selected' : '' }}>Secondary</option>
+                                        </select>
+                                        @error('type')
+                                            <div class="text-danger">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+                                    <div class="form-group">
                                         <label for="rank">Rank</label>
                                         <input type="number" name="rank" value="{{ old('rank', $classroom->rank) }}"
                                             class="form-control @error('rank') is-invalid @enderror" id="rank"

@@ -11,6 +11,7 @@ use App\Models\Student;
 use App\Models\Subject;
 use App\Models\Term;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -25,12 +26,16 @@ class ClassroomController extends Controller
     private function classroomValidation($request)
     {
         $messages = [
-            'name.unique' => 'Classroom Exists',
+            "name.unique" => "Classroom Exists",
         ];
 
-        $validatedData = $request->validate([
-            'name' => ['required', 'string', 'unique:classrooms'],
-        ], $messages);
+        $validatedData = $request->validate(
+            [
+                "name" => ["required", "string", "unique:classrooms"],
+                "type" => ["required", "string", "in:primary,secondary"],
+            ],
+            $messages
+        );
 
         return $validatedData;
     }
@@ -42,27 +47,34 @@ class ClassroomController extends Controller
      */
     public function index()
     {
-        $classrooms = Classroom::all()->sortBy('rank');
+        $classrooms = Classroom::all()->sortBy("rank");
 
-        return view('classroom.index', compact('classrooms'));
+        return view("classroom.index", compact("classrooms"));
     }
 
     /**
-     * Store classroom
+     * Store a new classroom
+     *
+     * Gets the highest existing rank and adds 1 to create the next rank.
+     * Validates the classroom data, creates a URL-friendly slug from the name,
+     * combines the rank, slug and validated data, then creates the classroom.
      *
      * @param  Request  $request
      * @return \Illuminate\Http\RedirectResponse
      */
     public function store(Request $request)
     {
-        $maxRank = Classroom::max('rank');
-        $rank = ['rank' => $maxRank + 1];
+        $maxRank = Classroom::query()->max("rank");
         $validatedData = $this->classroomValidation($request);
-        $slug = ['slug' => Str::of($validatedData['name'])->slug('-')];
-        $data = $rank + $slug + $validatedData;
-        Classroom::create($data);
 
-        return back()->with('success', 'Classroom Created!');
+        Classroom::create([
+            "rank" => $maxRank + 1,
+            "slug" => Str::of($validatedData["name"])->slug("-"),
+            "name" => $validatedData["name"],
+            "type" => $validatedData["type"],
+        ]);
+
+        return back()->with("success", "Classroom Created!");
     }
 
     /**
@@ -73,7 +85,7 @@ class ClassroomController extends Controller
      */
     public function edit(Classroom $classroom)
     {
-        return view('classroom.edit', compact('classroom'));
+        return view("classroom.edit", compact("classroom"));
     }
 
     /**
@@ -83,39 +95,48 @@ class ClassroomController extends Controller
      * @param  Request  $request
      * @return \Illuminate\Http\RedirectResponse
      */
-    public function update(Classroom $classroom, Request $request)
-    {
-        $classrooms = Classroom::all();
-        $maxRank = $classrooms->max('rank');
+    public function update(
+        Classroom $classroom,
+        Request $request
+    ): \Illuminate\Http\RedirectResponse {
+        $maxRank = Classroom::query()->max("rank");
         $currentRank = $classroom->rank;
 
         $validatedData = $request->validate([
-            'name' => ['required', 'string', Rule::unique('classrooms')->ignore($classroom)],
-            'rank' => ['required', 'numeric', 'min:1', 'max:'.$maxRank],
+            "name" => [
+                "required",
+                "string",
+                Rule::unique("classrooms")->ignore($classroom),
+            ],
+            "type" => ["required", "string", "in:primary,secondary"],
+            "rank" => ["required", "numeric", "min:1", "max:" . $maxRank],
         ]);
 
-        /**
-         * get row where rank is equal to the posted rank and if it exists
-         * set the rank of the row to 0, then update the classroom that need to be updated
-         * to avoid unique constraint error. Set the row whose rank was set to 0
-         * to the previous rank of the updated classroom model.
-         */
-        $rank = $validatedData['rank'];
-        $row = Classroom::where('rank', $rank)->first();
-        $slug = ['slug' => Str::of($validatedData['name'])->slug('-')];
+        $rank = $validatedData["rank"];
+        $slug = ["slug" => Str::of($validatedData["name"])->slug("-")];
 
-        //if row exists
-        if (! is_null($row)) {
-            $row->rank = 0;
-            $row->save();
-            $classroom->update($validatedData + $slug);
-            $row->rank = $currentRank;
-            $row->save();
-        } else {
-            $classroom->update($validatedData + $slug);
-        }
+        DB::transaction(function () use (
+            $classroom,
+            $validatedData,
+            $slug,
+            $rank,
+            $currentRank
+        ) {
+            if (
+                $existingRankClassroom = Classroom::query()
+                    ->where("rank", $rank)
+                    ->first()
+            ) {
+                $existingRankClassroom->update(["rank" => $currentRank]);
+            }
 
-        return redirect(route('classroom.index'))->with('success', 'Classroom Updated!');
+            $classroom->update($validatedData + $slug);
+        });
+
+        return redirect(route("classroom.index"))->with(
+            "success",
+            "Classroom Updated!"
+        );
     }
 
     /**
@@ -126,21 +147,40 @@ class ClassroomController extends Controller
      */
     public function show(Classroom $classroom)
     {
-        $students = Student::with('guardian')->whereNull('graduated_at')->where('is_active', true)->where('classroom_id', $classroom->id)->get();
+        $students = Student::with("guardian")
+            ->whereNull("graduated_at")
+            ->where("is_active", true)
+            ->where("classroom_id", $classroom->id)
+            ->get();
 
         $academicSessions = AcademicSession::all();
         $terms = Term::all();
         $activePeriod = Period::activePeriod();
 
         if (is_null($activePeriod)) {
-            return back()->with('error', 'Current Academic session is not set!');
+            return back()->with(
+                "error",
+                "Current Academic session is not set!"
+            );
         } else {
             $currentAcademicSession = $activePeriod->academicSession;
         }
 
-        $subjects = $classroom->subjects()->where('academic_session_id', $currentAcademicSession->id)->get();
+        $subjects = $classroom
+            ->subjects()
+            ->where("academic_session_id", $currentAcademicSession->id)
+            ->get();
 
-        return view('classroom.show', compact('students', 'classroom', 'academicSessions', 'terms', 'subjects'));
+        return view(
+            "classroom.show",
+            compact(
+                "students",
+                "classroom",
+                "academicSessions",
+                "terms",
+                "subjects"
+            )
+        );
     }
 
     /**
@@ -156,7 +196,10 @@ class ClassroomController extends Controller
         } catch (\Illuminate\Database\QueryException $e) {
             if ($e->getCode() == 23000) {
                 //SQLSTATE[23000]: Integrity constraint violation
-                return back()->with('error', 'Classroom can not be deleted because some resources are dependent on it!');
+                return back()->with(
+                    "error",
+                    "Classroom can not be deleted because some resources are dependent on it!"
+                );
             }
         }
 
@@ -167,14 +210,14 @@ class ClassroomController extends Controller
          * and then loop through them to update their ranks
          * while incrementing the rank
          */
-        $classrooms = Classroom::all()->sortBy('rank');
+        $classrooms = Classroom::all()->sortBy("rank");
         $rank = 1;
         foreach ($classrooms as $classroom) {
-            $classroom->update(['rank' => $rank]);
+            $classroom->update(["rank" => $rank]);
             $rank++;
         }
 
-        return back()->with('success', 'Classroom Deleted!');
+        return back()->with("success", "Classroom Deleted!");
     }
 
     /**
@@ -190,21 +233,25 @@ class ClassroomController extends Controller
 
         //NOTE: subjects can only be set for the current academic session
         if (Period::activePeriodIsNotSet()) {
-            return back()->with('error', 'Academic Session is not set');
+            return back()->with("error", "Academic Session is not set");
         }
 
         $currentAcademicSession = Period::activePeriod()->academicSession;
 
         //loop subjects and get the ones that are related to the classroom
         foreach ($subjects as $subject) {
-            $relation = $subject->classrooms()->where('classroom_id', $classroom->id)->where('academic_session_id', $currentAcademicSession->id)->exists();
+            $relation = $subject
+                ->classrooms()
+                ->where("classroom_id", $classroom->id)
+                ->where("academic_session_id", $currentAcademicSession->id)
+                ->exists();
             $relations = array_merge($relations, [$subject->name => $relation]);
         }
 
         //set array as collection for it to be showable in the view
         $relations = collect($relations);
 
-        return view('subject.set', compact('relations', 'classroom'));
+        return view("subject.set", compact("relations", "classroom"));
     }
 
     /**
@@ -217,30 +264,46 @@ class ClassroomController extends Controller
     public function updateSubjects(Classroom $classroom, Request $request)
     {
         if (Period::activePeriodIsNotSet()) {
-            return back()->with('error', 'Active Period is not set!');
+            return back()->with("error", "Active Period is not set!");
         }
 
         $currentAcademicSession = Period::activePeriod()->academicSession;
 
         //detach all subjects from classroom when no subject is provided
-        if (! $request->has('subjects')) {
-            $classroom->subjects()->wherePivot('academic_session_id', '=', $currentAcademicSession->id)->sync([]);
+        if (!$request->has("subjects")) {
+            $classroom
+                ->subjects()
+                ->wherePivot(
+                    "academic_session_id",
+                    "=",
+                    $currentAcademicSession->id
+                )
+                ->sync([]);
 
-            return back()->with('success', 'Subjects set successfully');
+            return back()->with("success", "Subjects set successfully");
         }
 
         $subjects = $request->subjects;
         $subjectIds = [];
 
         foreach ($subjects as $subject) {
-            $subjectId = Subject::where('name', $subject)->first()->id;
+            $subjectId = Subject::where("name", $subject)->first()->id;
             array_push($subjectIds, $subjectId);
         }
 
         //insert all subjectIds to the related class on the pivot table
-        $classroom->subjects()->wherePivot('academic_session_id', '=', $currentAcademicSession->id)->syncWithPivotValues($subjectIds, ['academic_session_id' => $currentAcademicSession->id]);
+        $classroom
+            ->subjects()
+            ->wherePivot(
+                "academic_session_id",
+                "=",
+                $currentAcademicSession->id
+            )
+            ->syncWithPivotValues($subjectIds, [
+                "academic_session_id" => $currentAcademicSession->id,
+            ]);
 
-        return back()->with('success', 'Subjects set successfully');
+        return back()->with("success", "Subjects set successfully");
     }
 
     /**
@@ -253,7 +316,7 @@ class ClassroomController extends Controller
     {
         $students = $classroom->getActiveStudents();
 
-        return view('student.promote-demote', compact('students', 'classroom'));
+        return view("student.promote-demote", compact("students", "classroom"));
     }
 
     /**
@@ -265,30 +328,34 @@ class ClassroomController extends Controller
      */
     public function promoteStudents(Request $request, Classroom $classroom)
     {
-
         // if no student is selected
-        if (! $request->has('students')) {
-            return back()->with('error', 'No students selected');
+        if (!$request->has("students")) {
+            return back()->with("error", "No students selected");
         }
 
         $studentIds = $request->students;
 
         $classRank = $classroom->rank;
-        $highestClassRank = Classroom::max('rank');
+        $highestClassRank = Classroom::max("rank");
 
         // If students are not in the highest class promote them
         if ($classRank !== $highestClassRank) {
             $newClassRank = $classRank + 1;
-            $newClassId = Classroom::where('rank', $newClassRank)->first()->id;
+            $newClassId = Classroom::where("rank", $newClassRank)->first()->id;
 
-            Student::find($studentIds)->map(function ($student) use ($newClassId) {
-                $student->update(['classroom_id' => $newClassId]);
+            Student::find($studentIds)->map(function ($student) use (
+                $newClassId
+            ) {
+                $student->update(["classroom_id" => $newClassId]);
             });
 
-            return back()->with('success', 'Students Promoted!');
+            return back()->with("success", "Students Promoted!");
         }
 
-        return back()->with('error', 'Students is in the Maximum class possible');
+        return back()->with(
+            "error",
+            "Students is in the Maximum class possible"
+        );
     }
 
     /**
@@ -301,28 +368,33 @@ class ClassroomController extends Controller
     public function demoteStudents(Request $request, Classroom $classroom)
     {
         // if no student is selected
-        if (! $request->has('students')) {
-            return back()->with('error', 'No students selected');
+        if (!$request->has("students")) {
+            return back()->with("error", "No students selected");
         }
 
         $studentIds = $request->students;
 
         $classRank = $classroom->rank;
-        $lowestClassRank = Classroom::min('rank');
+        $lowestClassRank = Classroom::min("rank");
 
         // If students are not in the lowest class demote them
         if ($classRank !== $lowestClassRank) {
             $newClassRank = $classRank - 1;
-            $newClassId = Classroom::where('rank', $newClassRank)->first()->id;
+            $newClassId = Classroom::where("rank", $newClassRank)->first()->id;
 
-            Student::find($studentIds)->map(function ($student) use ($newClassId) {
-                $student->update(['classroom_id' => $newClassId]);
+            Student::find($studentIds)->map(function ($student) use (
+                $newClassId
+            ) {
+                $student->update(["classroom_id" => $newClassId]);
             });
 
-            return back()->with('success', 'Students Demoted!');
+            return back()->with("success", "Students Demoted!");
         }
 
-        return back()->with('error', 'Student is in the Minimum class possible');
+        return back()->with(
+            "error",
+            "Student is in the Minimum class possible"
+        );
     }
 
     /**
@@ -334,10 +406,17 @@ class ClassroomController extends Controller
      */
     public function showBranch(Classroom $classroom, Branch $branch)
     {
-        $branchClassroom = BranchClassroom::where('classroom_id', $classroom->id)
-            ->where('branch_id', $branch->id)->first();
+        $branchClassroom = BranchClassroom::where(
+            "classroom_id",
+            $classroom->id
+        )
+            ->where("branch_id", $branch->id)
+            ->first();
 
-        return view('classroom.branch', compact('branch', 'classroom', 'branchClassroom'));
+        return view(
+            "classroom.branch",
+            compact("branch", "classroom", "branchClassroom")
+        );
     }
 
     /**
@@ -352,26 +431,30 @@ class ClassroomController extends Controller
         $branches = $request->branches;
 
         foreach ($branches as $branch) {
-
             // Validate if all the selected branches exist
-            if (! Branch::where('name', $branch)->exists()) {
-                return back()->with('error', "Branch $branch does not exist");
+            if (!Branch::where("name", $branch)->exists()) {
+                return back()->with("error", "Branch $branch does not exist");
             }
         }
 
-        $classroomBranches = $classroom->branches->pluck('name');
+        $classroomBranches = $classroom->branches->pluck("name");
         $branches = collect($branches);
 
         $newBranches = $branches->diff($classroomBranches);
         $removedBranches = $classroomBranches->diff($branches);
 
         $removedBranches->map(function ($branch) use ($classroom) {
-            $branch = Branch::where('name', $branch)->first();
-            $branchClassroom = BranchClassroom::where('branch_id', $branch->id)->where('classroom_id', $classroom->id)->first();
+            $branch = Branch::where("name", $branch)->first();
+            $branchClassroom = BranchClassroom::where("branch_id", $branch->id)
+                ->where("classroom_id", $classroom->id)
+                ->first();
 
             // Check if the branch has students
             if ($branchClassroom->students->count() > 1) {
-                return back()->with('error', "Cannot remove $classroom->name $branch->name because it has students");
+                return back()->with(
+                    "error",
+                    "Cannot remove $classroom->name $branch->name because it has students"
+                );
             }
 
             // Remove the branch from the classroom
@@ -379,11 +462,11 @@ class ClassroomController extends Controller
         });
 
         $newBranches->map(function ($branch) use ($classroom) {
-            $branch = Branch::where('name', $branch)->first();
+            $branch = Branch::where("name", $branch)->first();
 
             $classroom->branches()->attach($branch->id);
         });
 
-        return back()->with('success', 'Branches Updated!');
+        return back()->with("success", "Branches Updated!");
     }
 }

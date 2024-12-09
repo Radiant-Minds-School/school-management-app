@@ -32,7 +32,7 @@
                 <div class="row">
                     <div class="col-12">
                         <!-- Default box -->
-                        <div class="card">
+                        <div class="card col-6">
                             <div class="card-header">
                                 <h3 class="card-title">New Classroom</h3>
                             </div>
@@ -40,11 +40,23 @@
                                 @csrf
                                 <div class="card-body">
                                     <div class="form-group">
-                                        <label for="Classroom">Classroom</label>
+                                        <label for="Classroom">Name</label>
                                         <input type="text" name="name" value="{{ old('name') }}"
                                             class="form-control @error('name') is-invalid @enderror" id="classroom"
                                             placeholder="Enter Classroom">
                                         @error('name')
+                                            <div class="text-danger">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="Type">Type</label>
+                                        <!-- Select -->
+                                        <select class="form-control" name="type">
+                                            <option value="primary">Primary</option>
+                                            <option value="secondary">Secondary</option>
+                                            <!-- <option value="3">Tertiary</option> -->
+                                        </select>
+                                        @error('type')
                                             <div class="text-danger">{{ $message }}</div>
                                         @enderror
                                     </div>
@@ -66,6 +78,7 @@
                                         <tr>
                                             <th>Rank</th>
                                             <th>Name</th>
+                                            <th>Type</th>
                                             <th>Population</th>
                                             <th>Action</th>
                                         </tr>
@@ -78,6 +91,9 @@
                                                 </td>
                                                 <td>
                                                     {{ $classroom->name }}
+                                                </td>
+                                                <td>
+                                                    {{ $classroom->type }}
                                                 </td>
                                                 <td>
                                                     {{ $classroom->countActiveStudents() }}
@@ -113,6 +129,7 @@
                                         <tr>
                                             <th>Rank</th>
                                             <th>Name</th>
+                                            <th>Type</th>
                                             <th>Population</th>
                                             <th>Action</th>
                                         </tr>
