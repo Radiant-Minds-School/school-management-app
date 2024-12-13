@@ -14,6 +14,28 @@ use Illuminate\Support\Facades\Cache as FacadesCache;
 
 class DashboardController extends Controller
 {
+    private function generateEducationLevelDistributionChart()
+    {
+        $primaryStudents = Student::whereHas("classroom", function ($query) {
+            $query->where("type", "primary");
+        })
+            ->whereNull("graduated_at")
+            ->where("is_active", true)
+            ->count();
+
+        $secondaryStudents = Student::whereHas("classroom", function ($query) {
+            $query->where("type", "secondary");
+        })
+            ->whereNull("graduated_at")
+            ->where("is_active", true)
+            ->count();
+
+        return [
+            "primary" => $primaryStudents,
+            "secondary" => $secondaryStudents,
+        ];
+    }
+
     /**
      * Handle the incoming request.
      *
@@ -22,39 +44,41 @@ class DashboardController extends Controller
      */
     public function __invoke(Request $request)
     {
-        $dashboardData = FacadesCache::remember('dashboardData', 60, function () {
-            $students = Student::activeStudents();
-            $studentsNo = count($students);
-            $alumni = Student::whereNotNull('graduated_at')->count();
-            $teachers = Teacher::count();
-            $users = User::count();
-            $classrooms = Classroom::count();
-            $period = Period::activePeriod();
-            $subjects = Subject::count();
-            $classroomPopulationChartData = $this->generateClassroomsPopulationChart();
-            $genderDistributionChartData = $this->generateGenderDistributionChart($students);
+        $dashboardData = FacadesCache::remember(
+            "dashboardData",
+            60,
+            function () {
+                $students = Student::activeStudents();
+                $studentsNo = count($students);
+                $alumni = Student::whereNotNull("graduated_at")->count();
+                $teachers = Teacher::count();
+                $users = User::count();
+                $classrooms = Classroom::count();
+                $period = Period::activePeriod();
+                $subjects = Subject::count();
+                $classroomPopulationChartData = $this->generateClassroomsPopulationChart();
+                $genderDistributionChartData = $this->generateGenderDistributionChart(
+                    $students
+                );
 
-            $dashboardData = [
-                'students' => $studentsNo,
-                'alumni' => $alumni,
-                'teachers' => $teachers,
-                'users' => $users,
-                'classrooms' => $classrooms,
-                'period' => $period,
-                'subjects' => $subjects,
-                'classroomPopulationChartData' => $classroomPopulationChartData,
-                'genderDistributionChartData' => $genderDistributionChartData,
-            ];
+                $dashboardData = [
+                    "students" => $studentsNo,
+                    "alumni" => $alumni,
+                    "teachers" => $teachers,
+                    "users" => $users,
+                    "classrooms" => $classrooms,
+                    "period" => $period,
+                    "subjects" => $subjects,
+                    "classroomPopulationChartData" => $classroomPopulationChartData,
+                    "genderDistributionChartData" => $genderDistributionChartData,
+                    "educationLevelDistributionChartData" => $this->generateEducationLevelDistributionChart(),
+                ];
 
-            return $dashboardData;
-        });
-
-        return view(
-            'dashboard',
-            compact(
-                'dashboardData',
-            )
+                return $dashboardData;
+            }
         );
+
+        return view("dashboard", compact("dashboardData"));
     }
 
     /** Generates data for the classrooms population chart
@@ -62,7 +86,7 @@ class DashboardController extends Controller
      */
     private function generateClassroomsPopulationChart()
     {
-        $classrooms = Classroom::with('students')->get();
+        $classrooms = Classroom::with("students")->get();
         $classroomNames = [];
         $populations = [];
         $colors = [];
@@ -78,9 +102,9 @@ class DashboardController extends Controller
         }
 
         return [
-            'classroomNames' => $classroomNames,
-            'populations' => $populations,
-            'colors' => $colors,
+            "classroomNames" => $classroomNames,
+            "populations" => $populations,
+            "colors" => $colors,
         ];
     }
 
@@ -93,16 +117,16 @@ class DashboardController extends Controller
     private function generateGenderDistributionChart($students)
     {
         $male = $students->filter(function ($student) {
-            return $student->sex == 'M';
+            return $student->sex == "M";
         });
 
         $female = $students->filter(function ($student) {
-            return $student->sex == 'F';
+            return $student->sex == "F";
         });
 
         return [
-            'male' => count($male),
-            'female' => count($female),
+            "male" => count($male),
+            "female" => count($female),
         ];
     }
 }

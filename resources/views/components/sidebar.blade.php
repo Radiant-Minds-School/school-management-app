@@ -126,7 +126,7 @@
                                <i class="nav-icon fa fa-child"></i>
 
                                <p>
-                                   Students Management
+                                   Students
                                    <i class="fas fa-angle-left right"></i>
                                </p>
                            </a>
