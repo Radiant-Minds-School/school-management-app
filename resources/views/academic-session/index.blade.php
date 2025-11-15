@@ -1,5 +1,4 @@
-<div>
-    {{-- Care about people's approval and you will be their prisoner. --}}
+<x-app-layout>
     <x-slot name="styles">
         <!-- DataTables -->
         <link rel="stylesheet" href="{{ asset('TAssets/plugins/datatables-bs4/css/dataTables.bootstrap4.min.css') }}">
@@ -80,6 +79,24 @@
         <!-- Main content -->
         <section class="content">
             <div class="container-fluid">
+                @if(session('success'))
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        {{ session('success') }}
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                @endif
+
+                @if(session('error'))
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        {{ session('error') }}
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                @endif
+
                 <div class="row">
                     <!-- New Academic Session Form -->
                     <div class="col-6">
@@ -87,31 +104,31 @@
                             <div class="card-header py-3">
                                 <h3 class="card-title">New Academic Session</h3>
                             </div>
-                            <form id="addAcademicSession" method="POST" action="#" wire:submit="submit">
+                            <form id="addAcademicSession" method="POST" action="{{ route('academic-session.store') }}">
                                 @csrf
                                 <div class="card-body">
                                     <div class="form-group">
-                                        <label for="Academic Session" class="font-weight-bold mb-2">Academic Session</label>
-                                        <input type="text" wire:model.live="name" class="form-control @error('name') is-invalid @enderror" id="academicSession" placeholder="Enter Academic Session">
+                                        <label for="name" class="font-weight-bold mb-2">Academic Session</label>
+                                        <input type="text" name="name" value="{{ old('name') }}" class="form-control @error('name') is-invalid @enderror" id="name" placeholder="Enter Academic Session">
                                         <small class="text-muted">e.g 2009-2010</small>
                                         @error('name')
-                                            <div class="text-danger">{{ $message }}</div>
+                                            <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
                                     </div>
                                     <div class="form-group">
-                                        <label class="font-weight-bold mb-2">Start Date</label>
-                                        <input type="text" wire:model.live="startDate" class="form-control @error('startDate') is-invalid @enderror" id="startDate" placeholder="">
+                                        <label for="start_date" class="font-weight-bold mb-2">Start Date</label>
+                                        <input type="text" name="start_date" value="{{ old('start_date') }}" class="form-control @error('start_date') is-invalid @enderror" id="start_date" placeholder="">
                                         <small class="text-muted">format: YYYY-MM-DD</small>
-                                        @error('startDate')
-                                            <div class="text-danger">{{ $message }}</div>
+                                        @error('start_date')
+                                            <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
                                     </div>
                                     <div class="form-group">
-                                        <label class="font-weight-bold mb-2">End Date</label>
-                                        <input type="text" wire:model.live="endDate" class="form-control @error('endDate') is-invalid @enderror" id="endDate" placeholder="">
+                                        <label for="end_date" class="font-weight-bold mb-2">End Date</label>
+                                        <input type="text" name="end_date" value="{{ old('end_date') }}" class="form-control @error('end_date') is-invalid @enderror" id="end_date" placeholder="">
                                         <small class="text-muted">format: YYYY-MM-DD</small>
-                                        @error('endDate')
-                                            <div class="text-danger">{{ $message }}</div>
+                                        @error('end_date')
+                                            <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
                                     </div>
                                 </div>
@@ -151,7 +168,7 @@
                                                                 <i class="fa fa-edit"></i>
                                                             </button>
                                                         </a>
-                                                        <button type="button" class="btn btn-danger" title="Delete" onclick="deleteConfirmationModal('{{ $academicSession->name }}')">
+                                                        <button type="button" class="btn btn-danger" title="Delete" onclick="deleteConfirmationModal('{{ $academicSession->name }}', '{{ $academicSession->id }}')">
                                                             <i class="fas fa-trash"></i>
                                                         </button>
                                                     </div>
@@ -182,11 +199,11 @@
                 </div>
                 <div class="modal-footer border-0 justify-content-between">
                     <div>
-                        <span data-delete-item='' id="deleteItem"></span>
-                        <button type="button" class="btn btn-danger px-4" id="confirmDelete">
-                            <span wire:loading.remove wire:target="delete">Yes</span>
-                            <div class="spinner-border spinner-border text-light" wire:loading wire:target="delete"></div>
-                        </button>
+                        <form id="deleteForm" method="POST" style="display: inline;">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="btn btn-danger px-4">Yes</button>
+                        </form>
                     </div>
                     <button type="button" class="btn btn-light" data-dismiss="modal">Cancel</button>
                 </div>
@@ -212,26 +229,12 @@
         <!-- Tempusdominus Bootstrap 4 -->
         <script src="{{ asset('TAssets/plugins/tempusdominus-bootstrap-4/js/tempusdominus-bootstrap-4.min.js') }}"></script>
 
-        <!-- AdminLTE App -->
         <script>
-            function deleteConfirmationModal(name) {
-                $('#deleteItemName').html(name)
-                $('#deleteConfirmationModal').modal('show')
-                document.getElementById('deleteItem').dataset.deleteItem = name
+            function deleteConfirmationModal(name, id) {
+                $('#deleteItemName').html(name);
+                $('#deleteForm').attr('action', '/academic-session/' + id);
+                $('#deleteConfirmationModal').modal('show');
             }
-
-            $('#confirmDelete').click(() => {
-                @this.set('deleteItem', document.getElementById('deleteItem').dataset.deleteItem)
-                Livewire.dispatch('delete')
-            })
-
-            Livewire.on('success', _ => {
-                $('#deleteConfirmationModal').modal('hide')
-            })
-
-            Livewire.on('error', _ => {
-                $('#deleteConfirmationModal').modal('hide')
-            })
 
             $(function() {
                 $("#example1").DataTable({
@@ -243,4 +246,4 @@
             });
         </script>
     </x-slot>
-</div>
+</x-app-layout>
