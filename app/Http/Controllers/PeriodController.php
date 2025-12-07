@@ -16,11 +16,16 @@ class PeriodController extends Controller
 {
     public function index(): View|Factory
     {
-        $periods = Period::with(['term', 'academicSession'])->get();
+        $periods = Period::with(["term", "academicSession"])
+            ->orderBy("created_at", "desc")
+            ->get();
         $academicSessions = AcademicSession::all();
         $terms = Term::all();
 
-        return view('period.index', compact('periods', 'academicSessions', 'terms'));
+        return view(
+            "period.index",
+            compact("periods", "academicSessions", "terms"),
+        );
     }
 
     public function store(StorePeriodRequest $request): RedirectResponse
@@ -29,36 +34,39 @@ class PeriodController extends Controller
 
         $periodService->store($request);
 
-        return back()->with('success', 'Record Created!');
+        return back()->with("success", "Record Created!");
     }
 
     public function edit(Period $period): View|Factory
     {
-        return view('period.edit', compact('period'));
+        return view("period.edit", compact("period"));
     }
 
- 
-    public function update(UpdatePeriodRequest $request, Period $period): RedirectResponse
-    {
+    public function update(
+        UpdatePeriodRequest $request,
+        Period $period,
+    ): RedirectResponse {
         $period->update($request->validated());
 
-        return back()->with('success', 'Period updated successfully');
+        return back()->with("success", "Period updated successfully");
     }
 
     public function setActivePeriod(Period $period): RedirectResponse
     {
-        $activePeriod = Period::where('active', true)->first();
+        $activePeriod = Period::where("active", true)->first();
 
         if ($activePeriod != null) {
-            $activePeriod->update(['active' => null]);
+            $activePeriod->update(["active" => null]);
         }
 
-        $period->update(['active' => true]);
+        $period->update(["active" => true]);
 
-        return back()->with('success', "{$period->academicSession->name} {$period->term->name} is now active");
+        return back()->with(
+            "success",
+            "{$period->academicSession->name} {$period->term->name} is now active",
+        );
     }
 
-    
     public function destroy(Period $period): RedirectResponse
     {
         try {
@@ -66,11 +74,14 @@ class PeriodController extends Controller
         } catch (\Illuminate\Database\QueryException $e) {
             if ($e->getCode() == 23000) {
                 //SQLSTATE[23000]: Integrity constraint violation
-                return back()->with('error', 'Period cannot be deleted because some resources are dependent on it!');
+                return back()->with(
+                    "error",
+                    "Period cannot be deleted because some resources are dependent on it!",
+                );
             }
         }
 
-        return back()->with('success', 'Deleted!');
+        return back()->with("success", "Deleted!");
     }
 
     /**
@@ -79,11 +90,11 @@ class PeriodController extends Controller
     public function togglePublishResults(Period $period): RedirectResponse
     {
         if (!$period->results_published_at) {
-            $period->update(['results_published_at' => now()]);
-            return back()->with('success', 'Results published!');
+            $period->update(["results_published_at" => now()]);
+            return back()->with("success", "Results published!");
         }
-        
-        $period->update(['results_published_at' => null]);
-        return back()->with('success', 'Results unpublished!');
+
+        $period->update(["results_published_at" => null]);
+        return back()->with("success", "Results unpublished!");
     }
 }

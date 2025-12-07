@@ -19,12 +19,15 @@ class AcademicSessionController extends Controller
      */
     public function index(): \Illuminate\Contracts\View\View|\Illuminate\Contracts\View\Factory
     {
-        $academicSessions = AcademicSession::all();
+        $academicSessions = AcademicSession::orderBy(
+            "created_at",
+            "desc",
+        )->get();
 
         // Log activity
-        \activity()
-            ->causedBy(auth()->user())
-            ->log("Requested Academic Sessions view");
+        // \activity()
+        //     ->causedBy(auth()->user())
+        //     ->log("Requested Academic Sessions view");
 
         return view("academic-session.index", compact("academicSessions"));
     }

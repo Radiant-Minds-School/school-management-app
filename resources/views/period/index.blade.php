@@ -128,7 +128,6 @@
                                 <table id="example1" class="table table-bordered table-striped">
                                     <thead>
                                         <tr>
-                                            <th>Rank</th>
                                             <th>Name</th>
                                             <th>Start Date</th>
                                             <th>End Date</th>
@@ -138,7 +137,6 @@
                                     <tbody>
                                         @foreach ($periods as $period)
                                             <tr>
-                                                <td>{{ $period->rank }}</td>
                                                 <td>
                                                     {{ $period->term->name }} {{ $period->academicSession->name }}
                                                     @if ($period->isActive())
@@ -207,7 +205,6 @@
                                     </tbody>
                                     <tfoot>
                                         <tr>
-                                            <th>Rank</th>
                                             <th>Name</th>
                                             <th>Start Date</th>
                                             <th>End Date</th>
@@ -322,7 +319,8 @@
                     "responsive": true,
                     "lengthChange": false,
                     "autoWidth": false,
-                    "buttons": ["copy", "csv", "excel", "pdf", "print"]
+                    "buttons": ["copy", "csv", "excel", "pdf", "print"],
+                    "order": []
                 }).buttons().container().appendTo('#example1_wrapper .col-md-6:eq(0)');
 
             });
