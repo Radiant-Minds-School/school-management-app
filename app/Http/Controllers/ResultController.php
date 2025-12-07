@@ -37,21 +37,19 @@ class ResultController extends Controller
             ->where("academic_session_id", $activePeriod->academicSession->id)
             ->get();
 
-        // $recordedSubjects = Result::where("student_id", $student->id)
-        //     ->where("period_id", $activePeriod->id)
-        //     ->where("classroom_id", $student->classroom->id)
-        //     ->pluck("subject_id");
+        $recordedSubjects = Result::where("student_id", $student->id)
+            ->where("period_id", $activePeriod->id)
+            ->where("classroom_id", $student->classroom->id)
+            ->pluck("subject_id");
 
-        // //filter subjects that have a result out
-        // $subjects = $classroomSubjects->map(function ($subject) use (
-        //     $recordedSubjects,
-        // ) {
-        //     if (!$recordedSubjects->contains($subject->id)) {
-        //         return $subject;
-        //     }
-        // });
-
-        $subjects = $classroomSubjects;
+        //filter subjects that have a result out
+        $subjects = $classroomSubjects->map(function ($subject) use (
+            $recordedSubjects,
+        ) {
+            if (!$recordedSubjects->contains($subject->id)) {
+                return $subject;
+            }
+        });
 
         return view(
             "result.create",
